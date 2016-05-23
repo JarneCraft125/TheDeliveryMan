@@ -1,0 +1,202 @@
+package me.JarneCraft125.Deliveryman.Config_MySQL;
+
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.logging.Level;
+ 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+import com.mysql.jdbc.Connection;
+
+import me.JarneCraft125.Deliveryman.Main;
+
+public class MysqlManager {
+ 
+    private static Main main;  
+    public MysqlManager(Main pl)
+    {
+        MysqlManager.main = pl;
+    }
+   
+   
+   
+    public static void setupSQL()
+    {
+ 
+        try
+        {
+ 
+        	Main.conn = (Connection) new MySQL(main.getConfig().getString("Deliveryman.MySQL.host"),
+                    main.getConfig().getString("Deliveryman.MySQL.port"),
+                    main.getConfig().getString("Deliveryman.MySQL.database"),
+                    main.getConfig().getString("Deliveryman.MySQL.username"),
+                    main.getConfig().getString("Deliveryman.MySQL.password")).openConnection();
+            Statement s = Main.conn.createStatement();
+            s.executeUpdate("CREATE TABLE IF NOT EXISTS `NetworkData` (`UUID` VARCHAR(36), `NAME` VARCHAR(32), `ITEM` STRING, `COOLDOWN` INT)");
+            s.close();
+ 
+        }
+        catch (Exception e)
+        {
+            Bukkit.getServer().getLogger().log(Level.SEVERE, "Error while setting up SQL");
+ 
+        }
+    }
+ 
+ 
+    public static void insertValues(Player p)
+    {
+        try
+        {
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE uuid = '" + p.getUniqueId() + "';");
+            if (!rs.next())
+            {
+                s.executeUpdate("INSERT INTO `DeliveryManData` (`UUID`, `NAME`, `ITEM`, `COOLDOWN`) VALUES( '" + p.getUniqueId() + "','" + p.getName() + "', '0', '0');");
+                s.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+ 
+    public static void addItem(Player player, String amount){
+ 
+        try{
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE UUID = '" + player.getUniqueId() + "';");
+            if(rs.getString("UUID") != null){
+                int actualam = rs.getInt("ITEM");
+                s.executeUpdate("UPDATE `DeliveryManData` SET ITEM = " + (actualam + amount) + " WHERE UUID = `" + player.getUniqueId() + "';");
+                s.close();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+ 
+    public static void addCooldown(Player player, int amount){
+ 
+        try{
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE UUID = '" + player.getUniqueId() + "';");
+            if(rs.getString("UUID") != null){
+                int actualam = rs.getInt("COOLDOWN");
+                s.executeUpdate("UPDATE `DeliveryManData` SET COOLDOWN = " + (actualam + amount) + " WHERE UUID = `" + player.getUniqueId() + "';");
+                s.close();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+ 
+   
+    public static void removeItem(Player player, int amount)
+    {
+        try
+        {
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE uuid = '" + player.getUniqueId() + "';");
+            rs.next();
+            if (rs.getString("UUID") != null)
+            {
+                int actualam = rs.getInt("ITEM");
+                s.executeUpdate("UPDATE `DeliveryManData` SET ITEM = " + (actualam - amount) + " WHERE uuid = '" + player.getUniqueId() + "';");
+                s.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+ 
+ 
+    public static void removeCooldown(Player player, int amount)
+    {
+        try
+        {
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE uuid = '" + player.getUniqueId() + "';");
+            rs.next();
+            if (rs.getString("UUID") != null)
+            {
+                int actualam = rs.getInt("COOLDOWN");
+                s.executeUpdate("UPDATE `DeliveryManData` SET COOLDOWN = " + (actualam - amount) + " WHERE uuid = '" + player.getUniqueId() + "';");
+                s.close();
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+ 
+ 
+    public static void setItem(Player player, String amount){
+ 
+        try{
+            Statement s= Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE UUID = '" + player.getUniqueId() + "';");
+            rs.next();
+            if(rs.getString("UUID") != null){
+                s.executeUpdate("UPDATE `DeliveryManData` SET ITEM = " + amount + " WHERE UUID = '" + player.getUniqueId() + "';");
+                s.close();
+            }
+ 
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+ 
+    public static void setCooldown(Player player, int amount){
+ 
+        try{
+            Statement s= Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT * FROM `DeliveryManData` WHERE UUID = '" + player.getUniqueId() + "';");
+            rs.next();
+            if(rs.getString("UUID") != null){
+                s.executeUpdate("UPDATE `DeliveryManData` SET COOLDOWN = " + amount + " WHERE UUID = '" + player.getUniqueId() + "';");
+                s.close();
+            }
+ 
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+ 
+   
+    public static int getItem(Player player){
+        int i = 0;
+        try{
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT `ITEM` FROM `DeliveryManData` WHERE `UUID` = '" + player.getUniqueId() + "';");
+            if(rs.next()){
+                i = rs.getInt("ITEM");
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+ 
+        return i;
+    }
+ 
+    public static int getCooldown(Player player){
+        int i = 0;
+        try{
+            Statement s = Main.conn.createStatement();
+            ResultSet rs = s.executeQuery("SELECT `COOLDOWN` FROM `DeliveryManData` WHERE `UUID` = '" + player.getUniqueId() + "';");
+            if(rs.next()){
+                i = rs.getInt("COOLDOWN");
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+ 
+        return i;
+    }
+}
+
