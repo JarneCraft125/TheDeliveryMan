@@ -1,0 +1,35 @@
+package me.JarneCraft125.Deliveryman.Gui;
+
+import me.JarneCraft125.Deliveryman.Main;
+import org.bukkit.ChatColor;
+import org.bukkit.event.Listener;
+
+public class Main_Gui
+implements Listener {
+    static Main Gui;
+
+    public Main_Gui(Main plugin) {
+        Gui = plugin;
+    }
+
+    public static String getTitle() {
+        String title = ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("DeliverymanGui.Title"));
+        return title;
+    }
+
+    public static int numSlots() {
+        int slots = Gui.getConfig().getInt("DeliverymanGui.NumberOfSlots");
+        return slots;
+    }
+
+    public static boolean isInt(String value) {
+        try {
+            Integer.parseInt(value);
+        }
+        catch (NumberFormatException efr) {
+            return false;
+        }
+        return true;
+    }
+}
+
