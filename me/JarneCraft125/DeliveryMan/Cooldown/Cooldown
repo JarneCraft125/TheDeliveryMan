@@ -1,0 +1,111 @@
+package me.JarneCraft125.Deliveryman.Cooldown;
+
+import java.util.HashMap;
+import java.util.UUID;
+
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+import me.JarneCraft125.Deliveryman.Main;
+
+public class Cooldown {
+    private UUID uuid;
+	static Main cl;
+
+    public Cooldown(UUID uUID) {
+        this.uuid = uUID;
+    }
+	public Cooldown(Main main) {
+		Cooldown.cl = main;
+	}
+
+    public UUID getUUID() {
+        return this.uuid;
+    }
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+	public static HashMap<String, ac> cooldownPlayers = new HashMap();
+
+    public static void add(String string, String string2, long l2, long l3) {
+        if (!cooldownPlayers.containsKey(string)) {
+            cooldownPlayers.put(string, new ac(string));
+            }
+        if (Cooldown.isCooling(string, string2)) {
+            return;
+        }
+        Cooldown.cooldownPlayers.get((Object)string).cooldownMap.put(string2, new ac(string, l2 * 1000, System.currentTimeMillis()));
+    }
+
+    public static void handleCooldowns() {
+        if (cooldownPlayers.isEmpty()) {
+            return;
+        }
+        for (String string : cooldownPlayers.keySet()) {
+            for (String string2 : Cooldown.cooldownPlayers.get((Object)string).cooldownMap.keySet()) {
+                if (Cooldown.getRemaining(string, string2) > 0.0) continue;
+                Cooldown.removeCooldown(string, string2);
+            }
+        }
+    }
+
+    public static boolean isCooling(String string, String string2) {
+        if (!cooldownPlayers.containsKey(string)) {
+            return false;
+        }
+        if (!Cooldown.cooldownPlayers.get((Object)string).cooldownMap.containsKey(string2)) {
+            return false;
+        }
+        return true;
+    }
+
+    public static double getRemaining(String string, String string2) {
+        if (!cooldownPlayers.containsKey(string)) {
+            return 0.0;
+        }
+        if (!Cooldown.cooldownPlayers.get((Object)string).cooldownMap.containsKey(string2)) {
+            return 0.0;
+        }
+        return Main.convert(Cooldown.cooldownPlayers.get((Object)string).cooldownMap.get((Object)string2).seconds + Cooldown.cooldownPlayers.get((Object)string).cooldownMap.get((Object)string2).systime - System.currentTimeMillis(), ut.SECONDS, 1);
+    }
+
+    public static String conTime(String string, String string2) {
+        int n = (int)(Cooldown.getRemaining(string, string2) / 60.0);
+        int n2 = (int)(Cooldown.getRemaining(string, string2) % 60.0);
+        String string3 = String.valueOf(n < 10 ? "0" : "") + n;
+        String string4 = String.valueOf(n2 < 10 ? "0" : "") + n2;
+        String string5 = " minute's";
+        String string6 = " second's";
+        String string7 = " and ";
+        if (Integer.valueOf(string3) == 1) {
+            string5 = " minute";
+        }
+        if (Integer.valueOf(string4) == 1) {
+            string4 = "second";
+        }
+        if (Integer.valueOf(string4) <= 0) {
+            string4 = "";
+            string6 = "";
+            string7 = "";
+        }
+        if (Integer.valueOf(string3) <= 0) {
+            string3 = "";
+            string5 = "";
+            string7 = "";
+        }
+        String string8 = String.valueOf(string3) + string5 + string7 + string4 + string6;
+        return string8;
+    }
+
+    
+    @SuppressWarnings({ "deprecation", "unused" })
+	public static void removeCooldown(String string, String string2) {
+        if (!cooldownPlayers.containsKey(string)) {
+            return;
+        }
+        if (!Cooldown.cooldownPlayers.get((Object)string).cooldownMap.containsKey(string2)) {
+            return;
+        }
+        Cooldown.cooldownPlayers.get((Object)string).cooldownMap.remove(string2);
+        Player player = Bukkit.getPlayer((String)string);
+    }
+}
+
