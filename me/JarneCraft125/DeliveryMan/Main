@@ -1,0 +1,433 @@
+package me.JarneCraft125.Deliveryman;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.logging.Logger;
+
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import com.gmail.filoghost.holographicdisplays.api.Hologram;
+import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
+import com.gmail.filoghost.holographicdisplays.api.line.TextLine;
+
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mysql.jdbc.Connection;
+
+import me.JarneCraft125.Deliveryman.Config_MySQL.MySQL;
+import me.JarneCraft125.Deliveryman.Config_MySQL.MysqlManager;
+import me.JarneCraft125.Deliveryman.Cooldown.CooldownU;
+import me.JarneCraft125.Deliveryman.Cooldown.ut;
+import me.JarneCraft125.Deliveryman.Gui.Main_Gui;
+import me.JarneCraft125.Deliveryman.Gui.Reward_Gui;
+import me.JarneCraft125.Deliveryman.Listeners.SettingsManager;
+import me.JarneCraft125.Deliveryman.Listeners.onJoin;
+import me.JarneCraft125.Deliveryman.NPC_Storage.DM_Storage;
+import net.citizensnpcs.api.CitizensAPI;
+import net.citizensnpcs.api.npc.NPC;
+import net.citizensnpcs.api.npc.NPCRegistry;
+
+public class Main extends JavaPlugin implements Listener {
+    public static Connection conn;
+    public MySQL sql;
+    FileConfiguration cfg;
+    Logger logger;
+	public HashMap<String, Hologram> boards = new HashMap<String, Hologram>();
+	public HashMap<String, TextLine> textline = new HashMap<String, TextLine>();
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public static ArrayList<String> hologram = new ArrayList();
+	public ArrayList<Hologram> holos = new ArrayList<Hologram>();
+    private File file;
+    private static Main instance;
+    private GameProfile gameprofile;
+    public static Main Gui;
+    public static Main cool;
+    public static Main plugin;
+    String[] header = new String[]{"Do NOT edit."};
+    public String name;
+    public int myGlobalVariable = getConfig().getInt(name + ".NPC-id");
+    public static Main Join;
+	@SuppressWarnings("unused")
+	private FileConfiguration data;
+    public static List<String> names;
+    ArrayList<UUID> inDly = new ArrayList<UUID>();
+    public File holograms = null;
+    public static DM_Storage storage;
+	 ArrayList<String> results = new ArrayList<String>();
+	 BufferedReader reader = null;
+	 InputStreamReader input = null;
+	 String id = "%%__USER__%%";
+    //public static HashMap<Player, Integer> cooldown = new HashMap<Player, Integer>();
+
+    @SuppressWarnings("unused")
+	private HashMap<Player, Long> cooldownTime= new HashMap<Player, Long>();
+    //private HashMap<Player, BukkitRunnable> cooldownTask= new HashMap<Player, BukkitRunnable>();
+	public static UUID uuid;
+    
+    public Main() {
+        this.logger = Logger.getLogger("Minecraft");
+        this.cfg = this.getConfig();
+        this.file = new File(this.getDataFolder(), "data.yml");
+    }
+	public void onEnable() {
+    	if (this.Citizens()) {
+            this.getLogger().severe(String.format((Object) ChatColor.RED + "Can't found Citizens plugin! Stopping Plugin!", new Object[0]));
+            this.getServer().getPluginManager().disablePlugin((Plugin) this);
+            return;
+        }
+
+        if (this.HolographicDisplays()) {
+            this.getLogger().severe(String.format((Object) ChatColor.RED + "Can't found HolographicDisplays plugin! Stopping Plugin!", new Object[0]));
+            this.getServer().getPluginManager().disablePlugin((Plugin) this);
+            return;
+        }
+        SettingsManager.setup(this);
+        storage = new DM_Storage(new File(this.getDataFolder() + "/DeliveryMan/storage.yml"));
+        storage.save();
+        storage.save();
+        Gui = this;
+        
+        plugin = this;
+        
+        Join = this;
+
+        cooldownTime= new HashMap<Player, Long>();
+        hologram = new ArrayList<String>();
+        //cooldownTask= new HashMap<Player, BukkitRunnable>();
+        this.data = YamlConfiguration.loadConfiguration((File)this.file);
+        if(getConfig().getBoolean("Deliveryman.MySQL.enabled")){
+	        new MySQL(this);
+	        new MysqlManager(this);
+	        MysqlManager.setupSQL();
+        }
+        PluginManager pm = this.getServer().getPluginManager();
+        pm.registerEvents((Listener) this, (Plugin) this);
+        pm.registerEvents((Listener) new Main_Gui(this), (Plugin) this);
+        pm.registerEvents((Listener) new onJoin(this), (Plugin) this);
+        pm.registerEvents((Listener) new Reward_Gui(this), (Plugin) this);
+        Bukkit.getServer().getPluginManager().registerEvents(this, this);
+        this.getServer().getPluginManager().getPlugin("DeliveryMan");
+        storage.save();
+        storage.getConfig().options().copyDefaults(true);
+        Bukkit.getConsoleSender().sendMessage(ChatColor.AQUA + "The Delivery Man " + ChatColor.GREEN + "Enabled The Delivery Man " + ChatColor.YELLOW + "v" + this.getDescription().getVersion());
+        }
+	  @SuppressWarnings("static-access")
+	public Main(Main plugin) {
+	        this.plugin = plugin;
+	    }
+    public static Main getInstance() {
+        return instance;
+    }
+
+    private boolean HolographicDisplays() {
+        if (this.getServer().getPluginManager().getPlugin("HolographicDisplays") == null) {
+            return false;
+        }
+        return false;
+    }
+
+    private boolean Citizens() {
+        if (this.getServer().getPluginManager().getPlugin("Citizens") == null) {
+            return false;
+        }
+        return false;
+    }
+    public void save() {
+    Bukkit.getServer().getScheduler().scheduleSyncRepeatingTask((Plugin)this, new Runnable(){
+
+        @Override
+        public void run() {
+        	Main.storage.save();
+        	Main.this.saveConfig();
+        }
+    }, 0, 40);
+}
+    public static Location getLoc(String path){
+		Location loc = null;
+		String[] locs = path.split(",");
+
+		loc = new Location(Bukkit.getWorld(locs[0]), Integer.parseInt(locs[1]), Integer.parseInt(locs[2]), Integer.parseInt(locs[3]));
+        loc.add(0.5D,0.0,0.5D);
+		return loc;
+	}
+    public void onDisable() {
+        instance = null;
+    	Bukkit.getConsoleSender().sendMessage(ChatColor.AQUA + "The Delivery Man " + ChatColor.RED + "Disabled The Delivery Man " + ChatColor.YELLOW + "v" + this.getDescription().getVersion());
+    }
+    public static Plugin getPlugin() {
+        return plugin;
+    }
+    public static void saveStringToConfig(String path, String value) {
+        plugin.getConfig().set(path, (Object)value);
+        plugin.saveConfig();
+    }
+
+	@SuppressWarnings({ "unused" })
+	public void spawnDeliveryman(Player p, String name){
+        if (!storage.getConfig().contains(name)) {
+            if (name.contains(".")) {
+                p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("CreateDeliveryman.Cannotuse.dot")));
+                return;
+            }
+        } else {
+            p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("CreateDeliveryman.Deliveryman.samename")));
+            return;
+        }
+
+        NPCRegistry registry = CitizensAPI.getNPCRegistry();
+        NPC npc = registry.createNPC(EntityType.PLAYER, "Zealock");
+        List<String> list = storage.getConfig().getStringList("NPC-List");
+        list.add(name);
+        npc.spawn(p.getLocation());
+        gameprofile = new GameProfile(UUID.randomUUID(), name);
+        changeSkin();
+        		Location loc = p.getLocation().add(0, 2.8, 0);  
+        		Hologram holo = HologramsAPI.createHologram(plugin, loc);
+                hologram.add(holo.getLocation().toString());
+                TextLine line = holo.appendTextLine(
+                		ChatColor.translateAlternateColorCodes('&', getConfig().getString("Options.DeliveryMan-holo-name")));
+                TextLine line2 = holo.insertTextLine(1, 
+                		ChatColor.translateAlternateColorCodes('&', getConfig().getString("Options.DeliveryMan-holo-second-line")));
+			    List<String> locs = Main.storage.getConfig().getStringList("locations");
+			    locs.add(p.getLocation().toString());
+			    Main.storage.getConfig().set("locations", locs);
+			    Main.storage.save();
+        p.performCommand("npc select");
+        p.performCommand("npc skin -p " + getConfig().getString("Options.Deliveryman-skin"));
+        npc.setName(ChatColor.DARK_GRAY + "");
+        npc.getName();
+        int npcs = storage.getConfig().getInt("DeliveryMans-total");
+        npcs += 1;
+        storage.getConfig().set("DeliveryMans-total", npcs);
+        storage.getConfig().set("NPC-ID." + name, npc.getId());
+        List<String> id = storage.getConfig().getStringList("id-list");
+        id.add(String.valueOf(npc.getId()));
+        storage.getConfig().set("id-list", id);
+        storage.getConfig().set(String.valueOf(name) + ".Location.world", (Object) p.getLocation().getWorld().getName());
+        storage.getConfig().set(String.valueOf(name) + ".Location.x", (Object) p.getLocation().getX());
+        storage.getConfig().set(String.valueOf(name) + ".Location.y", (Object) p.getLocation().getY());
+        storage.getConfig().set(String.valueOf(name) + ".Location.z", (Object) p.getLocation().getZ());
+       p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("CreateDeliveryman.Succesfully").replaceAll("%Deliveryman%", name)));
+       storage.getConfig().set(String.valueOf(name) + ".Spawned", (Object) (this.getConfig().getInt(String.valueOf(name) + "Spawned", 0) + 1));
+       storage.save();
+       storage.getConfig().set("NPC-List", list);        
+        storage.save();
+    }
+	
+    public void changeSkin() {
+        String value = "eyJ0aW1lc3RhbXAiOjE0NTU0MDgyNjQ3NTQsInByb2ZpbGVJZCI6ImU0MDE1NTBiZjNkNzRlMThiMzYxNWQzNDNjNTliMjA3IiwicHJvZmlsZU5hbWUiOiJaZWFsb2NrIiwic2lnbmF0dXJlUmVxdWlyZWQiOnRydWUsInRleHR1cmVzIjp7IlNLSU4iOnsidXJsIjoiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jMTYxNGMyN2NhYTRkYTJlNzhkZTBkNThjMTM0YTUzZGVjZTQ0Mjk5YzZkYTgyMmY4OTI4YTMyZDNlYmI0OCIsIm1ldGFkYXRhIjp7Im1vZGVsIjoic2xpbSJ9fX19";
+        String signature = "P/qDGUJCsLerFkBvIaqvZpyYkn+24DgzTPU97hj9brZCl8s9Dd8Q0pWl1LVGv2xRCnZwQD9zN46AJhoyx3MYlbR2xji0kS0mAswJdXNDDDGpdaba1xxcmdsKDZMTcKzYFbvQbz7agsU46hR/4Yv9sD4AqclAgrxEfEQQeQrFy1/JSggAfXDJqKJ2L3GRAxux6J+YgIaiogAfIJAZTMKOIQH93B5bT/TaXYtehXzKu7IXMFlLt1h94YXSuY8/mdHDzxlAV7mNHF8I7C9FiyKREqeiTU2Zm9x6tXZ+eOaykS9elYCCxR9Qyd1zfhgat9XdVb5ptrIGPyF9OK6NBQEORgU0VCD9pV0uUIwm4HPN9Nmg+yoH5x4pbmdLTijGeZx+wMp8maEFFIBdSOhRm0z6IOsyLjsInr1QjLmbnr1BYli73r8oBM4IRotXo9mIfhpwsHdBnoJKHQFvxmMJj6jr+cJfnON1C8puknqYOlUmrnmNZsyDiLQvGi7AAuC10yxfTCDKl7GhV0WkE1QRYjqoC/ZlrPZzgHbyXNPjLCyd3m5+SoFAUHP6oaJ2v6suxec1gDt/0llJ/HeL/qNge7KZb6EeEwzDtI9fvQf3oErcDf5c4BH6My0Fo5wPRNqP65U64PZgNit7kn0zCWXQKF67FfkfdTk+Gp1Pc8Wd+1EB0jA=";
+        gameprofile.getProperties().put("textures", new Property("textures", value, signature));
+    }
+
+	
+    public void removeDeliveryman(Player p, String name) {
+        if (name.contains(".")) {
+            p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("RemoveDeliveryman.Error.remove").replaceAll("%RemoveDeliveryman%", name)));
+            return;
+        }
+        
+        if (storage.getConfig().contains(name)) {
+            NPCRegistry registry = CitizensAPI.getNPCRegistry();
+            NPC npcToDestroy = registry.getById(storage.getConfig().getInt("NPC-ID." + name));
+            npcToDestroy.despawn();
+            npcToDestroy.destroy();
+            
+            storage.getConfig().set(String.valueOf(name) + "Location", (Object) null);
+            storage.save();
+            storage.getConfig().set(name, (Object) null);
+            storage.save();
+            List<String> list = storage.getConfig().getStringList("NPC-List");
+            list.remove(name);
+            
+            List<String> Saves = storage.getConfig().getStringList("Saved");
+            Saves.remove(name);
+            List<String> id = storage.getConfig().getStringList("id-list");
+            id.remove(String.valueOf(npcToDestroy.getId()));
+            storage.getConfig().set("id-list", id);
+            storage.getConfig().set("NPC-ID." + name, null);
+            storage.save();
+            storage.getConfig().set("NPC-List", list);
+            storage.getConfig().set("Saved", Saves);
+            int npcs = storage.getConfig().getInt("DeliveryMans-total");
+            npcs -= 1;
+            storage.getConfig().set("DeliveryMans-total", npcs);
+            storage.getConfig().set(name, null);
+            storage.save();
+            List<String> locs = Main.storage.getConfig().getStringList("locations");
+		    if(locs.isEmpty()){
+		    	p.sendMessage("§cHolograms list is empty!");
+		    	return;
+		    }
+		    locs.remove(locs.get(locs.size()-1));
+		    Main.storage.getConfig().set("locations", locs);
+		    Main.storage.save();
+            for (Hologram  holograms : HologramsAPI.getHolograms(plugin)) {
+                Location playerLoc   = p.getLocation();
+                Location hologramLoc = holograms.getLocation();
+                if (playerLoc.distance(hologramLoc) < 5) {
+                	hologram.remove(holograms.getLocation().toString());
+              	     getConfig().set("Holograms." + holograms, null);
+                     this.saveConfig();
+                    holograms.delete();
+                }
+            }
+            p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("RemoveDeliveryman.Succesfully").replaceAll("%RemovedDeliveryman%", name)));
+        } else {
+            p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("RemoveDeliveryman.Registrated")));
+        }
+    }
+    
+	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
+        if (cmd.getName().equalsIgnoreCase("dm") || cmd.getName().equalsIgnoreCase("deliveryman")) {
+            if (args.length == 0) {
+                Player p = (Player) sender;
+                p.sendMessage("\u00a7cUse /dm help to show the help menu!");
+            } else if (args.length == 1) {
+                if (args[0].contains("help")) {
+                    if (sender instanceof Player) {
+                        Player p = (Player) sender;
+                        p.sendMessage(ChatColor.GOLD + "-=-=-=-=-=-=-=-=[" + ChatColor.AQUA + "The Delivery Man" + ChatColor.GOLD + "]=-=-=-=-=-=-=-=-");
+                        p.sendMessage(ChatColor.GREEN + "                       Version: 1.2.5                 ");
+                        p.sendMessage(ChatColor.GREEN + "/dm gui " + ChatColor.GRAY + "Opens the gui!");
+                        p.sendMessage(ChatColor.GREEN + "/dm list " + ChatColor.GRAY + "To see every delivery man that you have created!");
+                        p.sendMessage(ChatColor.GREEN + "/dm reload " + ChatColor.GRAY + "for reload the config!");
+                        p.sendMessage(ChatColor.GREEN + "/dm create <name> " + ChatColor.GRAY + "to Create an Delivery Man!");
+                        p.sendMessage(ChatColor.GREEN + "/dm remove <name> " + ChatColor.GRAY + "to Remove an Delivery Man!");
+                        p.sendMessage(ChatColor.GREEN + "/dm click <false/true> " + ChatColor.GRAY + "to set the right click able of The Delivery Man on true or false!");
+                        p.sendMessage(ChatColor.GOLD + "-=-=-=-=-=-=-=-=[" + ChatColor.AQUA + "The Delivery Man" + ChatColor.GOLD + "]=-=-=-=-=-=-=-=-");
+                    }
+                } else if (args[0].equalsIgnoreCase("reload")) {
+                    if (!sender.hasPermission("deliveryman.reload")) {
+                        sender.sendMessage(getConfig().getString("Reload.Nopermission").replaceAll("&", "§"));
+                        return true;
+                    }
+                    Bukkit.getPluginManager().getPlugin("DeliveryMan").reloadConfig();
+                    sender.sendMessage(getConfig().getString("Reload.Succesfully").replaceAll("&", "§"));
+                    return true;
+                } 
+            } 
+            if (args.length == 1) {
+            	if (args[0].equalsIgnoreCase("gui")){
+                    if (sender instanceof Player) {
+   	   				 Player p = (Player)sender;
+   	   			 if (p.hasPermission("deliveryman.gui")) {
+   	   			 p.openInventory(Reward_Gui.openGui(p));
+   	   			 }else {
+                     p.sendMessage(ChatColor.RED + "Sorry! " + (Object) ChatColor.GRAY + "You dont have Permission to do that!");
+                 }
+                }
+              }
+            }
+            if (args.length == 1) {
+            	if (args[0].equalsIgnoreCase("list")){
+                    if (sender instanceof Player) {
+   	   				 Player p = (Player)sender;
+   	   			 if (p.hasPermission("deliveryman.list")) {
+   	   				 if(storage.getConfig().getString("NPC-List") == null){
+   	   	   	   			p.sendMessage(ChatColor.GRAY + "Delivery Man NPC's loading...");
+   	   	   	   			p.sendMessage(ChatColor.RED + "ERROR!" + ChatColor.GRAY + " No Delivery Man Found!");
+   	   				 }else{
+   	   	   			List<String> list = storage.getConfig().getStringList("NPC-List");
+   	   	   			p.sendMessage(ChatColor.GRAY + "Delivery Man NPC's loading...");
+   	   	   			p.sendMessage(ChatColor.GREEN + "SuccesFully Loaded!");
+   	   	   			p.sendMessage(ChatColor.GREEN + "Here are the Delivery Man's that you have spawned:");
+   	                for (String s : list) {
+   	                	p.sendMessage(ChatColor.GRAY + "- " + ChatColor.AQUA + s);
+  	                }
+   	   				 }
+   	   			 }else {
+                     p.sendMessage(ChatColor.RED + "Sorry! " + (Object) ChatColor.GRAY + "You dont have Permission to do that!");
+                 }
+                }
+              }
+            }          
+            if (args.length == 2) {
+                Player p = (Player) sender;
+                if (p.hasPermission("deliveryman.manage")) {
+                    if (args[0].equalsIgnoreCase("create")) {
+                        String name = args[1];
+                        this.spawnDeliveryman(p, name);
+                        name = "";
+                    } else if (args[0].equalsIgnoreCase("remove")) {
+                        String name = args[1];
+                               this.removeDeliveryman(p, name);
+                        name = "";
+                    }else if (args[0].equalsIgnoreCase("save")){
+                    	String name = args[1];
+                    	if(storage.getConfig().getString(name) == null){
+                    		p.sendMessage(ChatColor.RED + "This Delivery man can not be found!");
+                    	}else{
+                    		p.sendMessage(ChatColor.GREEN + "Delivery Man succesfully saved!");
+                            List<String> Saves = storage.getConfig().getStringList("Saved");
+                            Saves.add(name);
+                            storage.getConfig().set("Saved", Saves);
+                            storage.save();
+                        	name = "";
+                    	}
+                    }
+                } else {
+                    p.sendMessage(ChatColor.RED + "Sorry! " + (Object) ChatColor.GRAY + "You dont have Permission to do that!");
+                }
+            }
+            if(args.length == 2){
+            	Player p = (Player) sender;
+            	if(p.hasPermission("deliveryman.manage")){
+            		if(args[0].equalsIgnoreCase("click")){
+            			if(args[1].equalsIgnoreCase("true")){
+            				getConfig().set("Deliveryman-right-click.true-false", true);
+            				saveConfig();
+            				p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("Options.deliveryman-true-false").replace("%true-false%", args[1])));
+            			}
+            			if(args[1].equalsIgnoreCase("false")){
+            				getConfig().set("Deliveryman-right-click.true-false", false);
+            				saveConfig();
+            				p.sendMessage(ChatColor.translateAlternateColorCodes('&', getConfig().getString("Options.deliveryman-true-false").replace("%true-false%", args[1])));
+            			}
+            		}
+            	} else {
+                    p.sendMessage(ChatColor.RED + "Sorry! " + (Object) ChatColor.GRAY + "You dont have Permission to do that!");
+                }
+            }
+        }
+        return false;
+    }
+    
+
+    public static double convert(long l2, ut ut2, int n) {
+        if (ut2 == ut.BEST) {
+            ut2 = l2 < 60000 ? ut.SECONDS : (l2 < 3600000 ? ut.MINUTES : (l2 < 86400000 ? ut.HOURS : ut.DAYS));
+        }
+        if (ut2 == ut.SECONDS) {
+            return CooldownU.trim((double)l2 / 1000.0, n);
+        }
+        if (ut2 == ut.MINUTES) {
+            return CooldownU.trim((double)l2 / 60000.0, n);
+        }
+        if (ut2 == ut.HOURS) {
+            return CooldownU.trim((double)l2 / 3600000.0, n);
+        }
+        if (ut2 == ut.DAYS) {
+            return CooldownU.trim((double)l2 / 8.64E7, n);
+        }
+        return CooldownU.trim(l2, n);
+    }
+
+}
