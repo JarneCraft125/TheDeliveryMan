@@ -1,0 +1,169 @@
+package me.JarneCraft125.Deliveryman.Gui;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import me.JarneCraft125.Deliveryman.Cooldown.Cooldown;
+import me.JarneCraft125.Deliveryman.Cooldown.Delays;
+import me.JarneCraft125.Deliveryman.Gui.Main_Gui;
+import me.JarneCraft125.Deliveryman.Main;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+public class Reward_Gui
+implements Listener {
+    static Main Gui;
+
+    public Reward_Gui(Main plugin) {
+        Gui = plugin;
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+	public static Inventory openGui(Player p) {
+        Inventory inv = Bukkit.createInventory(null, Gui.getConfig().getInt("DeliverymanGui.NumberOfSlots"), Main_Gui.getTitle());
+        for (String s : Gui.getConfig().getConfigurationSection("Prizes").getKeys(true)) {
+            if (s.contains(".")) continue;
+            try {
+                ItemMeta im;
+                List lore;
+                int id;
+                ArrayList<String> coloredLore;
+                ItemStack item;
+                int i = Integer.parseInt(s);
+                if (i > 53 || i < 1) {
+                    return inv;
+                }
+                if (Cooldown.isCooling(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + i + ".CooldownName")))) {
+                    if (0.0 > Cooldown.getRemaining(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + i + ".CooldownName")))) {
+                        Cooldown.removeCooldown(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + i + ".CooldownName")));
+                    }
+                    id = Gui.getConfig().getInt("Prizes." + i + ".CooldownMeta");
+                    item = new ItemStack(Material.getMaterial((String)Gui.getConfig().getString("Prizes." + i + ".CooldownItem").toUpperCase()), 1, (short)id);
+                    im = item.getItemMeta();
+                    im.setDisplayName(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + i + ".CooldownName")));
+                    lore = Gui.getConfig().getStringList("Prizes." + i + ".Cooldownlore");
+                    coloredLore = new ArrayList();
+                    for (Object t : lore) {
+                        String replace = Delays.getTime(Gui.getConfig().getInt("Prizes." + i + ".Cooldown"));
+                        coloredLore.add(((String)t).replaceAll("&", "\u00a7").replaceAll("%darkstar%", "\u2605").replaceAll("%whitestar%", "\u2605").replaceAll("%cooldown%", replace));
+                        im.setLore(coloredLore);
+                    }
+                    item.setItemMeta(im);
+                    inv.setItem(i, item);
+                    p.openInventory(inv);
+                    continue;
+                }
+                id = Gui.getConfig().getInt("Prizes." + i + ".Meta");
+                item = new ItemStack(Material.getMaterial((String)Gui.getConfig().getString("Prizes." + i + ".Item").toUpperCase()), 1, (short)id);
+                im = item.getItemMeta();
+                im.setDisplayName(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + i + ".Name")));
+                lore = Gui.getConfig().getStringList("Prizes." + i + ".lore");
+                coloredLore = new ArrayList<String>();
+                for (Object t : lore) {
+                    coloredLore.add(((String)t).replaceAll("&", "\u00a7").replaceAll("%darkstar%", "\u2605").replaceAll("%whitestar%", "\u2605"));
+                    im.setLore(coloredLore);
+                }
+                item.setItemMeta(im);
+                inv.setItem(i, item);
+                p.openInventory(inv);
+                continue;
+            }
+            catch (NumberFormatException ex) {
+                ex.printStackTrace();
+            }
+        }
+        return inv;
+    }
+
+    @SuppressWarnings("rawtypes")
+	@EventHandler
+    public void onInventoryClick(InventoryClickEvent e) {
+        if (!e.getInventory().getName().equalsIgnoreCase(Main_Gui.getTitle())) {
+            return;
+        }
+        Player p = (Player)e.getWhoClicked();
+        e.setCancelled(true);
+        if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) {
+            e.setCancelled(true);
+            return;
+        }
+        Inventory inv = e.getInventory();
+        int i = e.getSlot();
+        if (inv.getName().equalsIgnoreCase(Main_Gui.getTitle()) && i > -1 && i < 54) {
+            while (i < Main_Gui.numSlots()) {
+                int slot = e.getSlot();
+                if (slot == i) {
+                    if (!p.hasPermission(Gui.getConfig().getString("Prizes." + slot + ".Permission"))) {
+                        p.sendMessage(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".Nopermission")));
+                        p.playSound(p.getLocation(), Sound.valueOf((String)Gui.getConfig().getString("Prizes." + slot + ".NoPermssound")), 10.0f, 30.0f);
+                        p.closeInventory();
+                        return;
+                    }
+                    if (Cooldown.isCooling(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownName")))) {
+                        if (0.0 > Cooldown.getRemaining(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownName")))) {
+                            Cooldown.removeCooldown(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownName")));
+                        }
+                        String replace = Delays.getTime(Gui.getConfig().getInt("Prizes." + i + ".Cooldown"));
+                        p.sendMessage(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownMessage.Chat")).replaceAll("%cooldown%", replace));
+                        p.playSound(p.getLocation(), Sound.valueOf((String)Gui.getConfig().getString("Prizes." + slot + ".Sound.Cooldown")), 10.0f, 30.0f);
+                        int id = Gui.getConfig().getInt("Prizes." + slot + ".CooldownMeta");
+                        ItemStack item = new ItemStack(Material.getMaterial((String)Gui.getConfig().getString("Prizes." + slot + ".CooldownItem").toUpperCase()), 1, (short)id);
+                        ItemMeta im = item.getItemMeta();
+                        im.setDisplayName(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownName")));
+                        List lore = Gui.getConfig().getStringList("Prizes." + slot + ".Cooldownlore");
+                        ArrayList<String> coloredLore = new ArrayList<String>();
+                        for (Object t2 : lore) {
+                            coloredLore.add(((String)t2).replaceAll("&", "\u00a7").replaceAll("%darkstar%", "\u2605").replaceAll("%whitestar%", "\u2605").replaceAll("%cooldown%", replace));
+                            im.setLore(coloredLore);
+                        }
+                        item.setItemMeta(im);
+                        inv.setItem(i, item);
+                        return;
+                    }
+                    Cooldown.add(p.getName(), ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".CooldownName")), Gui.getConfig().getInt("Prizes." + slot + ".Cooldown"), System.currentTimeMillis());
+                    int id = Gui.getConfig().getInt("Prizes." + slot + ".Meta");
+                    ItemStack item = new ItemStack(Material.getMaterial((String)Gui.getConfig().getString("Prizes." + slot + ".Item").toUpperCase()), 1, (short)id);
+                    ItemMeta im = item.getItemMeta();
+                    im.setDisplayName(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".Name")));
+                    List lore = Gui.getConfig().getStringList("Prizes." + slot + ".lore");
+                    ArrayList<String> coloredLore = new ArrayList<String>();
+                    for (Object t3 : lore) {
+                        coloredLore.add(((String)t3).replaceAll("&", "\u00a7").replaceAll("%darkstar%", "\u2605").replaceAll("%whitestar%", "\u2605"));
+                        im.setLore(coloredLore);
+                    }
+                    item.setItemMeta(im);
+                    inv.setItem(i, item);
+                    List cmdlist = Gui.getConfig().getStringList("Prizes." + slot + ".Commands");
+                    Iterator iterator = cmdlist.iterator();
+                    while (iterator.hasNext()) {
+                        String cmd = (String)iterator.next();
+                        if (cmd.contains("%player%")) {
+                            cmd = cmd.replace("%player%", p.getName());
+                        }
+                        Bukkit.dispatchCommand((CommandSender)Bukkit.getConsoleSender(), (String)cmd);
+                    }
+                    p.playSound(p.getLocation(), Sound.valueOf((String)Gui.getConfig().getString("Prizes." + slot + ".Sound.GetPrize")), 10.0f, 30.0f);
+                    String replace = Delays.getTime(Gui.getConfig().getInt("Prizes." + i + ".Cooldown"));
+                    p.sendMessage(ChatColor.translateAlternateColorCodes((char)'&', (String)Gui.getConfig().getString("Prizes." + slot + ".Getitem")).replaceAll("%cooldown%", replace));
+                    if (Gui.getConfig().getBoolean("Options.close-gui-on-click")) {
+                        p.closeInventory();
+                    } else {
+                        Reward_Gui.openGui(p);
+                    }
+                }
+                ++i;
+            }
+        }
+    }
+}
+
