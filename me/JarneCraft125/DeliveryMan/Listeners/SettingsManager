@@ -1,0 +1,61 @@
+package me.JarneCraft125.Deliveryman.Listeners;
+
+import java.io.File;
+import java.io.IOException;
+ 
+import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginDescriptionFile;
+ 
+public class SettingsManager {
+ 
+    private SettingsManager() { }
+   
+    static SettingsManager instance = new SettingsManager();
+   
+    public static SettingsManager getInstance() {
+            return instance;
+    }
+   
+    Plugin p;
+   
+    public static FileConfiguration kit;
+    public static File kits;
+   
+    public static void setup(Plugin p) {      
+            kits = new File(p.getDataFolder(), "config.yml");
+           
+            if (!kits.exists()) {
+                    try {
+                           kits.createNewFile();
+                    }
+                    catch (IOException e) {
+                            Bukkit.getServer().getLogger().severe("Could not create config.yml!");
+                    }
+            }
+           
+            kit = YamlConfiguration.loadConfiguration(kits);
+    }
+   
+    public static FileConfiguration getConfig() {
+            return kit;
+    }
+    public static void saveKits() {
+            try {
+                    kit.save(kits);
+            }
+            catch (IOException e) {
+                    Bukkit.getServer().getLogger().severe("Could not save config.yml!");
+            }
+    }
+   
+    public static void reloadKits() {
+            kit = YamlConfiguration.loadConfiguration(kits);
+    }
+   
+    public PluginDescriptionFile getDesc() {
+            return p.getDescription();
+    }
+}
