@@ -1,0 +1,14 @@
+package me.JarneCraft125.Deliveryman.Cooldown;
+
+
+public enum ut {
+    BEST,
+    DAYS,
+    HOURS,
+    MINUTES,
+    SECONDS;
+    
+
+
+}
+
